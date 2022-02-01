@@ -75,7 +75,7 @@ Implement public methods in the canister in order to query collected data and op
 /// Returns collected data based on passed parameters. Called from browser.
 /// 
 #[ic_cdk_macros::query(name = "getCanisterMetrics")]
-pub async fn get_canister_metrics(parameters: api_type::GetMetricsParameters) -> Option<api_type::CanisterMetrics<'static>> {
+pub async fn get_canister_metrics(parameters: canistergeek_ic_rust::api_type::GetMetricsParameters) -> Option<canistergeek_ic_rust::api_type::CanisterMetrics<'static>> {
     validate_caller();
     canistergeek_ic_rust::monitor::get_metrics(&parameters)
 }
@@ -191,7 +191,7 @@ fn post_upgrade_function() {
 }
 
 #[ic_cdk_macros::query(name = "getCanisterMetrics")]
-pub async fn get_canister_metrics(parameters: api_type::GetMetricsParameters) -> Option<api_type::CanisterMetrics<'static>> {
+pub async fn get_canister_metrics(parameters: canistergeek_ic_rust::api_type::GetMetricsParameters) -> Option<canistergeek_ic_rust::api_type::CanisterMetrics<'static>> {
     validate_caller();
     canistergeek_ic_rust::monitor::get_metrics(&parameters)
 }
