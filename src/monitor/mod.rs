@@ -21,7 +21,7 @@ fn storage<'a>() -> &'a mut Storage {
         if let Some(s) = &mut STORAGE {
             s
         } else {
-            STORAGE = Some(Storage::init(BTreeMap::new()));
+            STORAGE = Some(Storage::new());
             storage()
         }
     }

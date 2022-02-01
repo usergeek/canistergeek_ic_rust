@@ -27,7 +27,7 @@ where
         }
         Some(day_data) => {
             let cell = get_cell(day_data, data_time);
-            if day_data.get_canister_cycles_data()[cell] == 0 {
+            if day_data.get_update_calls_data()[cell] == 0 {
                 init_cell(day_data, &cell, canister_info_supplier);
             } else {
                 day_data.increment_update_calls(&cell);

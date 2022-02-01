@@ -67,7 +67,7 @@ impl DayDataInfo for DayData {
         &self.canister_heap_memory_size_data
     }
 
-    fn get_canister_memory_size_data<'a>(&self) -> &DayCanisterMemorySizeData {
+    fn get_canister_memory_size_data(&self) -> &DayCanisterMemorySizeData {
         &self.canister_memory_size_data
     }
 
