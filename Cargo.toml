@@ -2,6 +2,9 @@
 name = "canistergeek_ic_rust"
 version = "0.1"
 edition = "2021"
+description = "A tool for Internet Computer to track your project canisters cycles and memory status."
+license = "MIT"
+repository = "git@github.com:usergeek/canistergeek_ic_rust.git"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
