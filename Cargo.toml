@@ -1,6 +1,6 @@
 [package]
 name = "canistergeek_ic_rust"
-version = "0.1"
+version = "0.1.1"
 edition = "2021"
 description = "A tool for Internet Computer to track your project canisters cycles and memory status."
 license = "MIT"
