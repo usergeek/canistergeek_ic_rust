@@ -36,7 +36,7 @@ Monitor collects how many heap memory bytes the canister consumes at particular 
 
 In file `Cargo.toml` your project, add dependency on crate:
 ```toml
-canistergeek_ic_rust = "0.1"
+canistergeek_ic_rust = "0.1.1"
 ```
 
 ## Usage
