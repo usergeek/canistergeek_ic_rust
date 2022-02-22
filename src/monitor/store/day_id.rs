@@ -21,7 +21,7 @@ pub fn to_day_id(year: &i32, month: &u32, day: &u32) -> Result<DayId, &'static s
 
 #[cfg(test)]
 mod tests {
-    use crate::store::day_id::*;
+    use super::*;
 
     fn from_day_id_to_year(day_id: DayId) -> i32 {
         MINIMAL_VALID_YEAR + (((day_id >> 12) & 0x000000FF) as i32)

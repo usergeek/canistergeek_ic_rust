@@ -2,8 +2,8 @@ use std::convert::TryFrom;
 use chrono::prelude::*;
 use ic_cdk::export::candid;
 
-use crate::api_type;
-use crate::data_type;
+use super::super::api_type;
+use super::data_type;
 
 mod day_iterator;
 

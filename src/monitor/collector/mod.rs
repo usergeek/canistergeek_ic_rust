@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 
-use crate::data_type::*;
+use super::data_type::*;
 
 const INTERVAL_IN_SECONDS: usize = 5 * 60;
 const DAY_SECONDS : usize = 24 * 60 * 60;
@@ -12,11 +12,11 @@ pub struct CanisterInfo {
     pub cycles: u64,
 }
 
-pub fn collect_canister_metrics<F>(storage: &mut dyn DayDataStorage, time_nanos: i64, canister_info_supplier: F)
+pub fn collect_canister_metrics<F>(storage: &mut dyn DayDataStorage, time_nanos: u64, canister_info_supplier: F)
 where
     F: Fn() -> CanisterInfo
 {
-    let data_time = Utc.timestamp_nanos(time_nanos);
+    let data_time = Utc.timestamp_nanos(time_nanos as i64);
 
     match storage.get_day_data(&data_time.year(), &data_time.month(), &data_time.day()) {
         None => {

@@ -65,3 +65,58 @@ pub type CanisterHeapMemoryAggregatedData<'a> = &'a Vec<u64>;
 pub type UpdateCallsAggregatedData<'a> = &'a Vec<u64>;
 
 
+// LOG messages
+
+pub type Nanos = u64;
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, CandidType, Deserialize)]
+pub enum CanisterLogRequest {
+    getMessagesInfo,
+    getMessages(GetLogMessagesParameters),
+    getLatestMessages(GetLatestLogMessagesParameters),
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, CandidType)]
+pub enum CanisterLogResponse<'a> {
+    messagesInfo(CanisterLogMessagesInfo),
+    messages(CanisterLogMessages<'a>),
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
+pub struct GetLogMessagesParameters {
+    pub count: u32,
+    pub fromTimeNanos: Option<Nanos>,
+    pub filterRegex: Option<String>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
+pub struct GetLatestLogMessagesParameters {
+    pub count: u32,
+    pub upToTimeNanos: Option<Nanos>,
+    pub filterRegex: Option<String>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType)]
+pub struct CanisterLogMessages<'a> {
+    pub data: Vec<&'a LogMessageData>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
+pub struct LogMessageData {
+    pub timeNanos: Nanos,
+    pub message: String
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType)]
+pub struct CanisterLogMessagesInfo {
+    pub count: u32,
+    pub firstTimeNanos: Option<Nanos>,
+    pub lastTimeNanos: Option<Nanos>,
+}

@@ -2,14 +2,15 @@
 
 const WASM_PAGE_SIZE: u64 = 65536;
 
-pub fn get_ic_time_nanos() -> i64 {
+pub fn get_ic_time_nanos() -> u64 {
     #[cfg(target_arch = "wasm32")]
         {
-            ic_cdk::api::time() as i64
+            ic_cdk::api::time()
         }
     #[cfg(not(target_arch = "wasm32"))]
         {
-            0
+            use chrono::prelude::*;
+            Utc::now().timestamp_nanos() as u64
         }
 }
 

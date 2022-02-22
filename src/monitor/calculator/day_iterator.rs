@@ -48,9 +48,9 @@ impl Iterator for DayIterator {
 
 #[cfg(test)]
 mod tests {
-    use crate::calculator::day_iterator::DayIterator;
     use chrono::prelude::*;
     use chrono::Duration;
+    use super::DayIterator;
 
 
     #[test]
