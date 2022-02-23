@@ -1,40 +1,41 @@
-use super::super::api_type::{Nanos, GetLogMessagesParameters, GetLatestLogMessagesParameters, CanisterLogMessages, LogMessageData, CanisterLogMessagesInfo};
-use super::data_type::LogMessagesSupplier;
-use regex::Regex;
+use super::super::api_type::{Nanos, GetLogMessagesParameters, GetLatestLogMessagesParameters, CanisterLogMessages, LogMessageData, CanisterLogMessagesInfo, GetLogMessagesFilter};
+use super::data_type::{LogMessagesSupplier, LogMessage};
+
+mod regex_filter;
+mod contains_filter;
 
 const MAX_CHUNK_SIZE : usize = 1024;
 
 pub fn get_log_messages_info(log_message_supplier: &dyn LogMessagesSupplier) -> CanisterLogMessagesInfo {
     match log_message_supplier.get_log_messages_count() {
-        0 => CanisterLogMessagesInfo { count: 0, firstTimeNanos: None, lastTimeNanos: None},
+        0 => CanisterLogMessagesInfo { count: 0, firstTimeNanos: None, lastTimeNanos: None, features: vec![]},
         count => {
             CanisterLogMessagesInfo {
                 count,
                 firstTimeNanos: log_message_supplier.get_first_log_message_time(),
-                lastTimeNanos: log_message_supplier.get_last_log_message_time()
+                lastTimeNanos: log_message_supplier.get_last_log_message_time(),
+                features: vec![]
             }
         }
     }
 }
 
-pub fn get_log_messages<'a>(log_message_supplier: &'a dyn LogMessagesSupplier, parameters: &GetLogMessagesParameters) -> Option<CanisterLogMessages<'a>> {
+pub fn get_log_messages<'a>(log_message_supplier: &'a dyn LogMessagesSupplier, parameters: GetLogMessagesParameters) -> Result<CanisterLogMessages<'a>, &'a str> {
     iterate_log_messages_int(false, &parameters.fromTimeNanos,
                              parameters.count as usize,
-                             &parameters.filterRegex, log_message_supplier)
+                             parameters.filter, log_message_supplier)
 }
 
-pub fn get_latest_log_messages<'a>(log_message_supplier: &'a dyn LogMessagesSupplier, parameters: &GetLatestLogMessagesParameters) -> Option<CanisterLogMessages<'a>> {
+pub fn get_latest_log_messages<'a>(log_message_supplier: &'a dyn LogMessagesSupplier, parameters: GetLatestLogMessagesParameters) -> Result<CanisterLogMessages<'a>, &'a str> {
     iterate_log_messages_int(true, &parameters.upToTimeNanos,
                              parameters.count as usize,
-                             &parameters.filterRegex, log_message_supplier)
+                             parameters.filter, log_message_supplier)
 }
 
-fn iterate_log_messages_int<'a>(reverse: bool, time: &Option<Nanos>, count: usize, filter_regex: &Option<String>, log_message_supplier: &'a dyn LogMessagesSupplier) -> Option<CanisterLogMessages<'a>> {
+fn iterate_log_messages_int<'a>(reverse: bool, time: &Option<Nanos>, count: usize, filter: Option<GetLogMessagesFilter>, log_message_supplier: &'a dyn LogMessagesSupplier) -> Result<CanisterLogMessages<'a>, &'a str> {
     if count == 0 || count > MAX_CHUNK_SIZE {
-        return None;
+        return Err("Wrong count number");
     }
-
-    let regex: Option<Regex> = build_regex(filter_regex);
 
     let mut iterator_box = if reverse {
         log_message_supplier.get_log_messages_reverse(time)
@@ -45,62 +46,66 @@ fn iterate_log_messages_int<'a>(reverse: bool, time: &Option<Nanos>, count: usiz
     let iterator = iterator_box.as_mut();
 
     let mut data: Vec<&'a LogMessageData> = Vec::with_capacity(count);
+    let mut message_time_nanos : Option<Nanos> = None;
 
-    if regex.is_some() {
-        let regex = regex.as_ref().unwrap();
+    match filter {
+        Some(filter) => {
+            let mut filter_trait = build_filter(filter)?;
 
-        for message in iterator {
-            if !regex.is_match(&message.message) {
-                continue;
-            }
+            for message in iterator {
+                if filter_trait.is_stop() {
+                    break;
+                }
 
-            data.push(message);
+                message_time_nanos = Some(message.timeNanos);
 
-            if data.len() >= count {
-                break;
+                if !filter_trait.check_match(&message) {
+                    continue;
+                }
+
+                data.push(message);
+
+                if data.len() >= count {
+                    break;
+                }
             }
         }
-    } else {
-        for message in iterator {
-            data.push(message);
+        None => {
+            for message in iterator {
+                message_time_nanos = Some(message.timeNanos);
+                data.push(message);
 
-            if data.len() >= count {
-                break;
-            }
-        }
-    }
-
-    Some(CanisterLogMessages { data })
-}
-
-fn build_regex(filter_regex: &Option<String>) -> Option<Regex> {
-    match filter_regex {
-        None => None,
-        Some(text) => {
-            match Regex::new(text) {
-                Ok(regex) => Some(regex),
-                Err(_) => {
-                    return None;
+                if data.len() >= count {
+                    break;
                 }
             }
         }
     }
+
+    Ok(CanisterLogMessages { data, lastAnalyzedMessageTimeNanos: message_time_nanos })
 }
 
+trait Filter {
+    fn check_match(&mut self, log_message: &LogMessage) -> bool;
+    fn is_stop(&self) -> bool;
+}
 
-#[cfg(test)]
-mod tests {
-    use crate::logger::calculator::build_regex;
-
-    #[test]
-    fn test_regex() {
-        let regex = build_regex(&Some(String::from("abc")));
-        let regex = regex.as_ref().unwrap();
-
-        assert_eq!(regex.is_match("mess abc sss"), true);
-        assert_eq!(regex.is_match("aa abc bb"), true);
-        assert_eq!(regex.is_match("aa ab bb"), false);
+fn build_filter<'a>(filter: GetLogMessagesFilter) -> Result<Box<dyn Filter>, &'a str> {
+    match &filter.messageRegex {
+        Some(regex_text) => {
+            let regex_filter = regex_filter::MessageRegexFilter::create(filter.analyzeCount as usize, regex_text).unwrap();
+            Ok(Box::new(regex_filter))
+        },
+        None => {
+            match &filter.messageContains {
+                Some(contains_text) => {
+                    let contains_filter = contains_filter::MessageContainsFilter::create(filter.analyzeCount as usize, contains_text).unwrap();
+                    Ok(Box::new(contains_filter))
+                },
+                None => Err("Empty filter")
+            }
+        }
     }
-
 }
+
 

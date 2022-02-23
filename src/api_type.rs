@@ -86,24 +86,33 @@ pub enum CanisterLogResponse<'a> {
 
 #[allow(non_snake_case)]
 #[derive(Debug, CandidType, Deserialize)]
+pub struct GetLogMessagesFilter {
+    pub analyzeCount: u32,
+    pub messageContains: Option<String>,
+    pub messageRegex: Option<String>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
 pub struct GetLogMessagesParameters {
     pub count: u32,
+    pub filter: Option<GetLogMessagesFilter>,
     pub fromTimeNanos: Option<Nanos>,
-    pub filterRegex: Option<String>,
 }
 
 #[allow(non_snake_case)]
 #[derive(Debug, CandidType, Deserialize)]
 pub struct GetLatestLogMessagesParameters {
     pub count: u32,
+    pub filter: Option<GetLogMessagesFilter>,
     pub upToTimeNanos: Option<Nanos>,
-    pub filterRegex: Option<String>,
 }
 
 #[allow(non_snake_case)]
 #[derive(Debug, CandidType)]
 pub struct CanisterLogMessages<'a> {
     pub data: Vec<&'a LogMessageData>,
+    pub lastAnalyzedMessageTimeNanos: Option<Nanos>,
 }
 
 #[allow(non_snake_case)]
@@ -113,10 +122,18 @@ pub struct LogMessageData {
     pub message: String
 }
 
+#[allow(non_camel_case_types)]
+#[derive(Debug, CandidType)]
+pub enum CanisterLogFeature {
+    filterMessageByContains,
+    filterMessageByRegex
+}
+
 #[allow(non_snake_case)]
 #[derive(Debug, CandidType)]
 pub struct CanisterLogMessagesInfo {
     pub count: u32,
+    pub features: Vec<Option<CanisterLogFeature>>,
     pub firstTimeNanos: Option<Nanos>,
     pub lastTimeNanos: Option<Nanos>,
 }

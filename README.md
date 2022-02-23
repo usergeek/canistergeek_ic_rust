@@ -1,12 +1,19 @@
 # canistergeek_ic_rust
 
-`canistergeek_ic_rust` is the open-source tool for Internet Computer to track your project canisters cycles and memory status.
+`canistergeek_ic_rust` is the open-source tool for Internet Computer to track your project canisters cycles and memory status and collect log messages.
 
-`canistergeek_ic_rust` can be integrated into your canisters as rust library which exposes the `canistergeek_ic_rust::monitor` - public module that collects the data for specific canister by 5 minutes intervals.
+`canistergeek_ic_rust` can be integrated into your canisters as rust library which exposes following modules:
+- `canistergeek_ic_rust::monitor` - public module that collects the data for specific canister by 5 minutes intervals.
+- `canistergeek_ic_rust::logger` - public module that collects log messages for specific canister.
 
-`canistergeek_ic_rust` should be used together with [Canistergeek-IC-JS](https://github.com/usergeek/canistergeek-ic-js) - Javascript library that fetches the data from canisters, perform all necessary calculations and displays it on a webpage
+`canistergeek_ic_rust` should be used together with [Canistergeek-IC-JS](https://github.com/usergeek/canistergeek-ic-js) - Javascript library that fetches the data from canisters, performs all necessary calculations and displays it on a webpage
 
-Stored data consumes ~6.5Mb per year per canister (assuming data points every 5 minutes).
+#### Memory consumption
+
+- `canistergeek_ic_rust::monitor` - stored data for cycles and memory consumes ~6.5Mb per year per canister (assuming data points every 5 minutes).
+- `canistergeek_ic_rust::logger` - depends on the length of messages and their number. (There is an [issue](https://github.com/dfinity/cdk-rs/issues/212) with heap memory size after upgrade).
+
+## Metrics
 
 ### Collecting the data
 
@@ -31,40 +38,49 @@ Monitor collects how many memory bytes the canister consumes at particular time 
 
 Monitor collects how many heap memory bytes the canister consumes at particular time using `core::arch::wasm32::memory_size(0) * WASM_PAGE_SIZE`.
 
+## Logger
+
+### Collecting log messages
+
+Log messages can be collected by calling `canistergeek_ic_rust::logger::log_message(message: String);` method in "update" methods in your canister.
+
+#### Log messages
+
+Logger collects time/message pairs with a maximum message length of 4096 characters.
+
+Default number of messages (10000) can be overridden with corresponding method in realtime.
 
 ## Installation
 
 In file `Cargo.toml` your project, add dependency on crate:
 ```toml
-canistergeek_ic_rust = "0.1.2"
+canistergeek_ic_rust = "0.2.1"
 ```
 
 ## Usage
 
-Please perform the following steps
+### Logger
 
-#### Add post/pre upgrade hooks
-
-Implement pre/post upgrade hooks.
-This step is necessary to save collected data between canister upgrades.
+Implement public methods in the canister in order to query collected log messages
 
 ```rust
-#[ic_cdk_macros::pre_upgrade]
-fn pre_upgrade_function() {
-    let stable_data = canistergeek_ic_rust::monitor::pre_upgrade_stable_data();
-    ic_cdk::storage::stable_save(stable_data);
+
+// CANISTER LOGGER
+
+/// Returns collected log messages based on passed parameters. Called from browser.
+/// 
+#[ic_cdk_macros::query(name = "getCanisterLog")]
+pub async fn get_canister_log(request: canistergeek_ic_rust::api_type::CanisterLogRequest) -> Option<canistergeek_ic_rust::api_type::CanisterLogResponse<'static>> {
+    validate_caller();
+    canistergeek_ic_rust::logger::get_canister_log(request)
 }
 
-#[ic_cdk_macros::post_upgrade]
-fn post_upgrade_function() {
-    let stable_data: Result<canistergeek_ic_rust::monitor::PostUpgradeStableData, String> = ic_cdk::storage::stable_restore();
-    if stable_data.is_ok() {
-        canistergeek_ic_rust::monitor::post_upgrade_stable_data(stable_data.unwrap());
-    }
+fn validate_caller() -> () {
+    // limit access here!
 }
 ```
 
-#### Implement public methods
+### Monitor
 
 Implement public methods in the canister in order to query collected data and optionally force collecting the data
 
@@ -93,7 +109,38 @@ fn validate_caller() -> () {
     // limit access here!
 }
 ```
-#### Add candid api declaration to `did` file
+
+#### Adjust "update" methods
+
+Call `canistergeek_ic_rust::monitor::collect_metrics()` method in all "update" methods in your canister in order to automatically collect all data.
+
+### Add post/pre upgrade hooks
+
+Implement pre/post upgrade hooks.
+This step is necessary to save collected data between canister upgrades.
+
+```rust
+#[ic_cdk_macros::pre_upgrade]
+fn pre_upgrade_function() {
+    let monitor_stable_data = canistergeek_ic_rust::monitor::pre_upgrade_stable_data();
+    let logger_stable_data = canistergeek_ic_rust::logger::pre_upgrade_stable_data();
+    ic_cdk::storage::stable_save((monitor_stable_data, logger_stable_data));
+}
+
+#[ic_cdk_macros::post_upgrade]
+fn post_upgrade_function() {
+    let stable_data: Result<(canistergeek_ic_rust::monitor::PostUpgradeStableData, canistergeek_ic_rust::logger::PostUpgradeStableData), String> = ic_cdk::storage::stable_restore();
+    match stable_data {
+        Ok((monitor_stable_data, logger_stable_data)) => {
+            canistergeek_ic_rust::monitor::post_upgrade_stable_data(monitor_stable_data);
+            canistergeek_ic_rust::logger::post_upgrade_stable_data(logger_stable_data);
+        }
+        Err(_) => {}
+    }
+}
+```
+
+### Add candid api declaration to `did` file
 
 In your canister did file `your_canister.did`, add next declaration:
 
@@ -101,7 +148,7 @@ In your canister did file `your_canister.did`, add next declaration:
 ...
 
 type UpdateCallsAggregatedData = vec nat64;
-type NumericEntity =
+type NumericEntity = 
  record {
    avg: nat64;
    first: nat64;
@@ -109,12 +156,18 @@ type NumericEntity =
    max: nat64;
    min: nat64;
  };
-type MetricsGranularity =
+type Nanos = nat64;
+type MetricsGranularity = 
  variant {
    daily;
    hourly;
  };
-type HourlyMetricsData =
+type LogMessagesData = 
+ record {
+   message: text;
+   timeNanos: Nanos;
+ };
+type HourlyMetricsData = 
  record {
    canisterCycles: CanisterCyclesAggregatedData;
    canisterHeapMemorySize: CanisterHeapMemoryAggregatedData;
@@ -122,13 +175,31 @@ type HourlyMetricsData =
    timeMillis: int;
    updateCalls: UpdateCallsAggregatedData;
  };
-type GetMetricsParameters =
+type GetMetricsParameters = 
  record {
    dateFromMillis: nat;
    dateToMillis: nat;
    granularity: MetricsGranularity;
  };
-type DailyMetricsData =
+type GetLogMessagesParameters = 
+ record {
+   count: nat32;
+   filter: opt GetLogMessagesFilter;
+   fromTimeNanos: opt Nanos;
+ };
+type GetLogMessagesFilter = 
+ record {
+   analyzeCount: nat32;
+   messageContains: opt text;
+   messageRegex: opt text;
+ };
+type GetLatestLogMessagesParameters = 
+ record {
+   count: nat32;
+   filter: opt GetLogMessagesFilter;
+   upToTimeNanos: opt Nanos;
+ };
+type DailyMetricsData = 
  record {
    canisterCycles: NumericEntity;
    canisterHeapMemorySize: NumericEntity;
@@ -136,30 +207,53 @@ type DailyMetricsData =
    timeMillis: int;
    updateCalls: nat64;
  };
-type CanisterMetricsData =
+type CanisterMetricsData = 
  variant {
    daily: vec DailyMetricsData;
    hourly: vec HourlyMetricsData;
  };
 type CanisterMetrics = record {data: CanisterMetricsData;};
 type CanisterMemoryAggregatedData = vec nat64;
+type CanisterLogResponse = 
+ variant {
+   messages: CanisterLogMessages;
+   messagesInfo: CanisterLogMessagesInfo;
+ };
+type CanisterLogRequest = 
+ variant {
+   getLatestMessages: GetLatestLogMessagesParameters;
+   getMessages: GetLogMessagesParameters;
+   getMessagesInfo;
+ };
+type CanisterLogMessagesInfo = 
+ record {
+   count: nat32;
+   features: vec opt CanisterLogFeature;
+   firstTimeNanos: opt Nanos;
+   lastTimeNanos: opt Nanos;
+ };
+type CanisterLogMessages = 
+ record {
+   data: vec LogMessagesData;
+   lastAnalyzedMessageTimeNanos: opt Nanos;
+ };
+type CanisterLogFeature =
+ variant {
+   filterMessageByContains;
+   filterMessageByRegex;
+ };
 type CanisterHeapMemoryAggregatedData = vec nat64;
 type CanisterCyclesAggregatedData = vec nat64;
-
 service : {
-    ...
-    
+  ...
   collectCanisterMetrics: () -> ();
+  getCanisterLog: (opt CanisterLogRequest) -> (opt CanisterLogResponse) query;
   getCanisterMetrics: (GetMetricsParameters) -> (opt CanisterMetrics) query;
 }
+
 ```
 
-
-#### Adjust "update" methods
-
-Call `canistergeek_ic_rust::monitor::collect_metrics()` method in all "update" methods in your canister in order to automatically collect all data.
-
-#### LIMIT ACCESS TO YOUR DATA
+### LIMIT ACCESS TO YOUR DATA
 
 🔴🔴🔴 We highly recommend limiting access by checking caller principal 🔴🔴🔴
 
@@ -178,15 +272,20 @@ fn validate_caller() {
 ```rust
 #[ic_cdk_macros::pre_upgrade]
 fn pre_upgrade_function() {
-    let stable_data = canistergeek_ic_rust::monitor::pre_upgrade_stable_data();
-    ic_cdk::storage::stable_save(stable_data);
+    let monitor_stable_data = canistergeek_ic_rust::monitor::pre_upgrade_stable_data();
+    let logger_stable_data = canistergeek_ic_rust::logger::pre_upgrade_stable_data();
+    ic_cdk::storage::stable_save((monitor_stable_data, logger_stable_data));
 }
 
 #[ic_cdk_macros::post_upgrade]
 fn post_upgrade_function() {
-    let stable_data: Result<canistergeek_ic_rust::monitor::PostUpgradeStableData, String> = ic_cdk::storage::stable_restore();
-    if stable_data.is_ok() {
-        canistergeek_ic_rust::monitor::post_upgrade_stable_data(stable_data.unwrap());
+    let stable_data: Result<(canistergeek_ic_rust::monitor::PostUpgradeStableData, canistergeek_ic_rust::logger::PostUpgradeStableData), String> = ic_cdk::storage::stable_restore();
+    match stable_data {
+        Ok((monitor_stable_data, logger_stable_data)) => {
+            canistergeek_ic_rust::monitor::post_upgrade_stable_data(monitor_stable_data);
+            canistergeek_ic_rust::logger::post_upgrade_stable_data(logger_stable_data);
+        }
+        Err(_) => {}
     }
 }
 
@@ -202,6 +301,12 @@ pub async fn collect_canister_metrics() -> () {
     canistergeek_ic_rust::monitor::collect_metrics();
 }
 
+#[ic_cdk_macros::query(name = "getCanisterLog")]
+pub async fn get_canister_log(request: canistergeek_ic_rust::api_type::CanisterLogRequest) -> Option<canistergeek_ic_rust::api_type::CanisterLogResponse<'static>> {
+    validate_caller();
+    canistergeek_ic_rust::logger::get_canister_log(request)
+}
+
 fn validate_caller() -> () {
     match ic_cdk::export::Principal::from_text("hozae-racaq-aaaaa-aaaaa-c") {
         Ok(caller) if caller == ic_cdk::caller() => (),
@@ -212,6 +317,7 @@ fn validate_caller() -> () {
 #[ic_cdk_macros::update(name = "doThis")]
 pub async fn do_this() -> () {
     canistergeek_ic_rust::monitor::collect_metrics();
+    canistergeek_ic_rust::logger::log_message(String::from("do_this"));
     // rest part of the your method...
 }
 ```

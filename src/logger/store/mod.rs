@@ -178,7 +178,7 @@ impl<'a> Iterator for LogMessageIterator<'a> {
 mod tests {
     use super::super::data_type::{LogMessage, LogMessagesSupplier, LogMessagesStorage, LogMessagesInfo};
     use super::super::store::Storage;
-    use crate::api_type::Nanos;
+    use super::super::super::api_type::Nanos;
 
     #[test]
     fn test_empty() {
