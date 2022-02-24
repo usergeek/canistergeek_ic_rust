@@ -20,6 +20,14 @@ impl Storage {
     pub fn init(queue: LogMessageQueue, max_count: usize, next: usize, full: bool) -> Self {
         Self { queue, max_count, next, full }
     }
+
+    fn get_count(&self) -> usize {
+        if self.full { self.max_count } else { self.next }
+    }
+
+    fn get_first_index(&self) -> usize {
+        if self.full { self.next } else { 0 }
+    }
 }
 
 impl LogMessagesInfo for Storage {
@@ -67,14 +75,19 @@ impl LogMessagesStorage for Storage {
         }
 
         let mut new_storage = Storage::new(new_max_messages_count);
-        if self.full {
-            while self.queue.len() > self.next {
-                new_storage.store_log_message(self.queue.remove(self.next))
-            }
-        }
 
-        while !self.queue.is_empty() {
-            new_storage.store_log_message(self.queue.remove(0))
+        let count = self.get_count();
+        let first_index = self.get_first_index();
+
+        let range = if new_max_messages_count >= count {
+            first_index..(first_index + count)
+        } else {
+            let start = first_index + count - new_max_messages_count;
+            start.. (start + new_max_messages_count)
+        };
+
+        for i in range {
+            new_storage.store_log_message(self.queue.get(i % self.max_count).unwrap().clone());
         }
 
         self.queue = new_storage.queue;
@@ -365,6 +378,88 @@ mod tests {
             validate_message(iterator.next().unwrap(), 40, "time 40");
             validate_message(iterator.next().unwrap(), 50, "time 50");
             validate_message(iterator.next().unwrap(), 60, "time 60");
+            assert_eq!(iterator.next().is_none(), true);
+        }
+    }
+
+    #[test]
+    fn test_set_max_size_not_full_less() {
+        let mut storage = Storage::new(4);
+        storage.set_max_messages_count(5);
+
+        {
+            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
+            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
+            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
+            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.set_max_messages_count(3);
+
+            let mut iterator_box = storage.get_log_messages(&None);
+            let iterator = iterator_box.as_mut();
+            validate_message(iterator.next().unwrap(), 20, "time 20");
+            validate_message(iterator.next().unwrap(), 30, "time 30");
+            validate_message(iterator.next().unwrap(), 40, "time 40");
+            assert_eq!(iterator.next().is_none(), true);
+        }
+    }
+
+    #[test]
+    fn test_set_max_size_not_full_more() {
+        let mut storage = Storage::new(5);
+
+        {
+            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
+            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
+            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
+            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.set_max_messages_count(6);
+
+            let mut iterator_box = storage.get_log_messages(&None);
+            let iterator = iterator_box.as_mut();
+            validate_message(iterator.next().unwrap(), 10, "time 10");
+            validate_message(iterator.next().unwrap(), 20, "time 20");
+            validate_message(iterator.next().unwrap(), 30, "time 30");
+            validate_message(iterator.next().unwrap(), 40, "time 40");
+            assert_eq!(iterator.next().is_none(), true);
+        }
+    }
+
+    #[test]
+    fn test_set_max_size_full_less() {
+        let mut storage = Storage::new(4);
+
+        {
+            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
+            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
+            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
+            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.set_max_messages_count(3);
+
+            let mut iterator_box = storage.get_log_messages(&None);
+            let iterator = iterator_box.as_mut();
+            validate_message(iterator.next().unwrap(), 20, "time 20");
+            validate_message(iterator.next().unwrap(), 30, "time 30");
+            validate_message(iterator.next().unwrap(), 40, "time 40");
+            assert_eq!(iterator.next().is_none(), true);
+        }
+    }
+
+    #[test]
+    fn test_set_max_size_full_more() {
+        let mut storage = Storage::new(3);
+
+        {
+            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
+            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
+            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
+            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.set_max_messages_count(5);
+
+            let mut iterator_box = storage.get_log_messages(&None);
+            let iterator = iterator_box.as_mut();
+            validate_message(iterator.next().unwrap(), 20, "time 20");
+            validate_message(iterator.next().unwrap(), 30, "time 30");
+            validate_message(iterator.next().unwrap(), 40, "time 40");
             assert_eq!(iterator.next().is_none(), true);
         }
     }

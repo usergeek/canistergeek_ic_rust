@@ -116,7 +116,7 @@ pub struct CanisterLogMessages<'a> {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, CandidType, Deserialize)]
+#[derive(Debug, CandidType, Deserialize, Clone)]
 pub struct LogMessageData {
     pub timeNanos: Nanos,
     pub message: String

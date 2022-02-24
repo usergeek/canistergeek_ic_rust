@@ -51,6 +51,7 @@ pub fn post_upgrade_stable_data(data: PostUpgradeStableData) {
 }
 
 pub fn set_max_messages_count<'a>(limit: u32) {
+    assert!(limit > 0);
     get_storage().set_max_messages_count(limit as usize);
 }
 
