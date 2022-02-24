@@ -54,7 +54,7 @@ Default number of messages (10000) can be overridden with corresponding method i
 
 In file `Cargo.toml` your project, add dependency on crate:
 ```toml
-canistergeek_ic_rust = "0.2.1"
+canistergeek_ic_rust = "0.2.2"
 ```
 
 ## Usage
