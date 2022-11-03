@@ -1,4 +1,5 @@
-use ic_cdk::export::{candid::{CandidType, Deserialize}};
+use candid::{CandidType, Deserialize};
+use serde::Serialize;
 
 // number of update calls in each time interval for a specific day.
 pub type DayUpdateCallsCountData = Vec<u64>;
@@ -13,7 +14,7 @@ pub type DayCanisterMemorySizeData = Vec<u64>;
 pub type DayCanisterCyclesData = Vec<u64>;
 
 // specific day data with all necessary metrics
-#[derive(Debug, CandidType, Deserialize)]
+#[derive(Debug, CandidType, Deserialize, Serialize)]
 pub struct DayData {
     update_calls_data: DayUpdateCallsCountData,
     canister_heap_memory_size_data: DayCanisterHeapMemorySizeData,
@@ -27,11 +28,18 @@ impl DayData {
             update_calls_data: create_empty_vector(cell_count),
             canister_heap_memory_size_data: create_empty_vector(cell_count),
             canister_memory_size_data: create_empty_vector(cell_count),
-            canister_cycles_data: create_empty_vector(cell_count)
+            canister_cycles_data: create_empty_vector(cell_count),
         }
     }
 
-    pub fn store(&mut self, cell: &usize, update_calls: u64, canister_heap_memory_size: u64, canister_memory_size: u64, canister_cycles: u64) {
+    pub fn store(
+        &mut self,
+        cell: &usize,
+        update_calls: u64,
+        canister_heap_memory_size: u64,
+        canister_memory_size: u64,
+        canister_cycles: u64,
+    ) {
         self.update_calls_data[*cell] = update_calls;
         self.canister_heap_memory_size_data[*cell] = canister_heap_memory_size;
         self.canister_memory_size_data[*cell] = canister_memory_size;
@@ -44,11 +52,7 @@ impl DayData {
 }
 
 fn create_empty_vector(cell_count: &usize) -> Vec<u64> {
-    let mut vec = Vec::with_capacity(*cell_count);
-    for _ in 0..*cell_count {
-        vec.push(0_u64);
-    }
-    vec
+    vec![0_u64; *cell_count]
 }
 
 pub trait DayDataInfo {

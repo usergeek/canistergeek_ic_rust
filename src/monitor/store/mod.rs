@@ -1,20 +1,17 @@
 mod day_id;
 
-use std::collections::BTreeMap;
-use super::data_type::{DayData, DayDataInfoSupplier, DayDataStorage, DayDataInfo};
+use super::data_type::{DayData, DayDataInfo, DayDataInfoSupplier, DayDataStorage};
 use day_id::DayId;
+use std::collections::BTreeMap;
 
 pub type DayDataTable = BTreeMap<DayId, DayData>;
 
+#[derive(Default)]
 pub struct Storage {
     day_data_table: DayDataTable,
 }
 
 impl Storage {
-    pub fn new() -> Self {
-        Self { day_data_table: BTreeMap::new() }
-    }
-
     pub fn init(day_data_table: DayDataTable) -> Self {
         Self { day_data_table }
     }
@@ -27,13 +24,11 @@ impl Storage {
 impl DayDataInfoSupplier for Storage {
     fn get_day_data_info(&self, year: &i32, month: &u32, day: &u32) -> Option<&dyn DayDataInfo> {
         match day_id::to_day_id(year, month, day) {
-            Ok(day_id) => {
-                match self.day_data_table.get(&day_id) {
-                    None => None,
-                    Some(day_data) => Some(day_data)
-                }
-            }
-            _ => None
+            Ok(day_id) => match self.day_data_table.get(&day_id) {
+                None => None,
+                Some(day_data) => Some(day_data),
+            },
+            _ => None,
         }
     }
 }

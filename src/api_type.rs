@@ -1,4 +1,5 @@
-use ic_cdk::export::{candid, candid::{CandidType, Deserialize}};
+use candid::{CandidType, Deserialize};
+use serde::Serialize;
 
 #[allow(non_snake_case)]
 #[derive(Debug, CandidType, Deserialize)]
@@ -16,7 +17,6 @@ pub enum MetricsGranularity {
 }
 
 pub type Millis = candid::Nat;
-
 
 #[derive(Debug, CandidType)]
 pub struct CanisterMetrics<'a> {
@@ -63,7 +63,6 @@ pub type CanisterCyclesAggregatedData<'a> = &'a Vec<u64>;
 pub type CanisterMemoryAggregatedData<'a> = &'a Vec<u64>;
 pub type CanisterHeapMemoryAggregatedData<'a> = &'a Vec<u64>;
 pub type UpdateCallsAggregatedData<'a> = &'a Vec<u64>;
-
 
 // LOG messages
 
@@ -116,17 +115,17 @@ pub struct CanisterLogMessages<'a> {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, CandidType, Deserialize, Clone)]
+#[derive(Debug, CandidType, Deserialize, Clone, Serialize)]
 pub struct LogMessageData {
     pub timeNanos: Nanos,
-    pub message: String
+    pub message: String,
 }
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, CandidType)]
 pub enum CanisterLogFeature {
     filterMessageByContains,
-    filterMessageByRegex
+    filterMessageByRegex,
 }
 
 #[allow(non_snake_case)]

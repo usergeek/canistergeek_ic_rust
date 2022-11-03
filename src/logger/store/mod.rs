@@ -1,10 +1,11 @@
-use ic_cdk::export::candid::{CandidType, Deserialize};
-use super::data_type::{LogMessage, LogMessagesSupplier, LogMessagesStorage, LogMessagesInfo};
 use super::super::api_type::Nanos;
+use super::data_type::{LogMessage, LogMessagesInfo, LogMessagesStorage, LogMessagesSupplier};
+use candid::CandidType;
+use serde::{Deserialize, Serialize};
 
 pub type LogMessageQueue = Vec<LogMessage>;
 
-#[derive(Debug, CandidType, Deserialize)]
+#[derive(Debug, CandidType, Deserialize, Serialize)]
 pub struct Storage {
     queue: LogMessageQueue,
     max_count: usize,
@@ -18,15 +19,28 @@ impl Storage {
     }
 
     pub fn init(queue: LogMessageQueue, max_count: usize, next: usize, full: bool) -> Self {
-        Self { queue, max_count, next, full }
+        Self {
+            queue,
+            max_count,
+            next,
+            full,
+        }
     }
 
     fn get_count(&self) -> usize {
-        if self.full { self.max_count } else { self.next }
+        if self.full {
+            self.max_count
+        } else {
+            self.next
+        }
     }
 
     fn get_first_index(&self) -> usize {
-        if self.full { self.next } else { 0 }
+        if self.full {
+            self.next
+        } else {
+            0
+        }
     }
 }
 
@@ -40,7 +54,7 @@ impl LogMessagesInfo for Storage {
             None
         } else {
             let index = if self.full { self.next } else { 0 };
-            Some(self.queue[index].timeNanos.clone())
+            Some(self.queue[index].timeNanos)
         }
     }
 
@@ -83,7 +97,7 @@ impl LogMessagesStorage for Storage {
             first_index..(first_index + count)
         } else {
             let start = first_index + count - new_max_messages_count;
-            start.. (start + new_max_messages_count)
+            start..(start + new_max_messages_count)
         };
 
         for i in range {
@@ -98,15 +112,20 @@ impl LogMessagesStorage for Storage {
 }
 
 impl LogMessagesSupplier for Storage {
-    fn get_log_messages(&self, from_time_nanos: &Option<Nanos>) -> Box<dyn Iterator<Item=&'_ LogMessage> + '_> {
+    fn get_log_messages(
+        &self,
+        from_time_nanos: &Option<Nanos>,
+    ) -> Box<dyn Iterator<Item = &'_ LogMessage> + '_> {
         Box::new(LogMessageIterator::create(self, from_time_nanos))
     }
 
-    fn get_log_messages_reverse(&self, up_to_time_nanos: &Option<Nanos>) -> Box<dyn Iterator<Item=&'_ LogMessage> + '_> {
+    fn get_log_messages_reverse(
+        &self,
+        up_to_time_nanos: &Option<Nanos>,
+    ) -> Box<dyn Iterator<Item = &'_ LogMessage> + '_> {
         Box::new(LogMessageIterator::create_reverse(self, up_to_time_nanos))
     }
 }
-
 
 struct LogMessageIterator<'a> {
     storage: &'a Storage,
@@ -118,18 +137,35 @@ struct LogMessageIterator<'a> {
 impl<'a> LogMessageIterator<'a> {
     fn create(storage: &'a Storage, from_time_nanos: &Option<Nanos>) -> LogMessageIterator<'a> {
         if storage.queue.is_empty() {
-            return LogMessageIterator { storage, index: 0, delta: 0, next_count: 0 };
+            return LogMessageIterator {
+                storage,
+                index: 0,
+                delta: 0,
+                next_count: 0,
+            };
         }
 
         let mut iterator = if storage.full {
-            LogMessageIterator { storage, index: storage.next, delta: 1, next_count: storage.max_count }
+            LogMessageIterator {
+                storage,
+                index: storage.next,
+                delta: 1,
+                next_count: storage.max_count,
+            }
         } else {
-            LogMessageIterator { storage, index: 0, delta: 1, next_count: storage.next }
+            LogMessageIterator {
+                storage,
+                index: 0,
+                delta: 1,
+                next_count: storage.next,
+            }
         };
 
         if from_time_nanos.is_some() {
             let from_time_nanos = from_time_nanos.unwrap();
-            while !iterator.is_done() && iterator.get_current_message().unwrap().timeNanos <= from_time_nanos {
+            while !iterator.is_done()
+                && iterator.get_current_message().unwrap().timeNanos <= from_time_nanos
+            {
                 iterator.shift_to_next();
             }
         }
@@ -137,20 +173,40 @@ impl<'a> LogMessageIterator<'a> {
         iterator
     }
 
-    fn create_reverse(storage: &'a Storage, up_to_time_nanos: &Option<Nanos>) -> LogMessageIterator<'a> {
+    fn create_reverse(
+        storage: &'a Storage,
+        up_to_time_nanos: &Option<Nanos>,
+    ) -> LogMessageIterator<'a> {
         if storage.queue.is_empty() {
-            return LogMessageIterator { storage, index: 0, delta: 0, next_count: 0 };
+            return LogMessageIterator {
+                storage,
+                index: 0,
+                delta: 0,
+                next_count: 0,
+            };
         }
 
         let mut iterator = if storage.full {
-            LogMessageIterator { storage, index: storage.max_count + storage.next - 1, delta: -1, next_count: storage.max_count }
+            LogMessageIterator {
+                storage,
+                index: storage.max_count + storage.next - 1,
+                delta: -1,
+                next_count: storage.max_count,
+            }
         } else {
-            LogMessageIterator { storage, index: storage.next - 1, delta: -1, next_count: storage.next }
+            LogMessageIterator {
+                storage,
+                index: storage.next - 1,
+                delta: -1,
+                next_count: storage.next,
+            }
         };
 
         if up_to_time_nanos.is_some() {
             let up_to_time_nanos = up_to_time_nanos.unwrap();
-            while !iterator.is_done() && iterator.get_current_message().unwrap().timeNanos >= up_to_time_nanos {
+            while !iterator.is_done()
+                && iterator.get_current_message().unwrap().timeNanos >= up_to_time_nanos
+            {
                 iterator.shift_to_next();
             }
         }
@@ -186,12 +242,13 @@ impl<'a> Iterator for LogMessageIterator<'a> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use super::super::data_type::{LogMessage, LogMessagesSupplier, LogMessagesStorage, LogMessagesInfo};
-    use super::super::store::Storage;
     use super::super::super::api_type::Nanos;
+    use super::super::data_type::{
+        LogMessage, LogMessagesInfo, LogMessagesStorage, LogMessagesSupplier,
+    };
+    use super::super::store::Storage;
 
     #[test]
     fn test_empty() {
@@ -211,7 +268,10 @@ mod tests {
         let mut storage = Storage::new(4);
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 10,
+                message: String::from("time 10"),
+            });
 
             let mut iterator_box = storage.get_log_messages(&None);
             let iterator = iterator_box.as_mut();
@@ -225,8 +285,14 @@ mod tests {
         }
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
-            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 20,
+                message: String::from("time 20"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 30,
+                message: String::from("time 30"),
+            });
 
             let mut iterator_box = storage.get_log_messages(&None);
             let iterator = iterator_box.as_mut();
@@ -244,7 +310,10 @@ mod tests {
         }
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 40,
+                message: String::from("time 40"),
+            });
 
             let mut iterator_box = storage.get_log_messages(&None);
             let iterator = iterator_box.as_mut();
@@ -264,7 +333,10 @@ mod tests {
         }
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 50, message: String::from("time 50") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 50,
+                message: String::from("time 50"),
+            });
 
             let mut iterator_box = storage.get_log_messages(&None);
             let iterator = iterator_box.as_mut();
@@ -289,10 +361,22 @@ mod tests {
         let mut storage = Storage::new(4);
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
-            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
-            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
-            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 10,
+                message: String::from("time 10"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 20,
+                message: String::from("time 20"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 30,
+                message: String::from("time 30"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 40,
+                message: String::from("time 40"),
+            });
 
             let mut iterator_box = storage.get_log_messages(&Some(20));
             let iterator = iterator_box.as_mut();
@@ -319,8 +403,14 @@ mod tests {
         }
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
-            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 10,
+                message: String::from("time 10"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 20,
+                message: String::from("time 20"),
+            });
             storage.set_max_messages_count(4);
 
             let mut iterator_box = storage.get_log_messages(&None);
@@ -331,9 +421,18 @@ mod tests {
         }
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
-            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
-            storage.store_log_message(LogMessage { timeNanos: 50, message: String::from("time 50") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 30,
+                message: String::from("time 30"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 40,
+                message: String::from("time 40"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 50,
+                message: String::from("time 50"),
+            });
             storage.set_max_messages_count(5);
 
             let mut iterator_box = storage.get_log_messages(&None);
@@ -346,7 +445,10 @@ mod tests {
         }
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 60, message: String::from("time 60") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 60,
+                message: String::from("time 60"),
+            });
 
             let mut iterator_box = storage.get_log_messages(&None);
             let iterator = iterator_box.as_mut();
@@ -388,10 +490,22 @@ mod tests {
         storage.set_max_messages_count(5);
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
-            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
-            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
-            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 10,
+                message: String::from("time 10"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 20,
+                message: String::from("time 20"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 30,
+                message: String::from("time 30"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 40,
+                message: String::from("time 40"),
+            });
             storage.set_max_messages_count(3);
 
             let mut iterator_box = storage.get_log_messages(&None);
@@ -408,10 +522,22 @@ mod tests {
         let mut storage = Storage::new(5);
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
-            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
-            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
-            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 10,
+                message: String::from("time 10"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 20,
+                message: String::from("time 20"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 30,
+                message: String::from("time 30"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 40,
+                message: String::from("time 40"),
+            });
             storage.set_max_messages_count(6);
 
             let mut iterator_box = storage.get_log_messages(&None);
@@ -429,10 +555,22 @@ mod tests {
         let mut storage = Storage::new(4);
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
-            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
-            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
-            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 10,
+                message: String::from("time 10"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 20,
+                message: String::from("time 20"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 30,
+                message: String::from("time 30"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 40,
+                message: String::from("time 40"),
+            });
             storage.set_max_messages_count(3);
 
             let mut iterator_box = storage.get_log_messages(&None);
@@ -449,10 +587,22 @@ mod tests {
         let mut storage = Storage::new(3);
 
         {
-            storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
-            storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
-            storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
-            storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+            storage.store_log_message(LogMessage {
+                timeNanos: 10,
+                message: String::from("time 10"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 20,
+                message: String::from("time 20"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 30,
+                message: String::from("time 30"),
+            });
+            storage.store_log_message(LogMessage {
+                timeNanos: 40,
+                message: String::from("time 40"),
+            });
             storage.set_max_messages_count(5);
 
             let mut iterator_box = storage.get_log_messages(&None);
@@ -471,22 +621,34 @@ mod tests {
         assert_eq!(storage.get_first_log_message_time().is_none(), true);
         assert_eq!(storage.get_last_log_message_time().is_none(), true);
 
-        storage.store_log_message(LogMessage { timeNanos: 10, message: String::from("time 10") });
+        storage.store_log_message(LogMessage {
+            timeNanos: 10,
+            message: String::from("time 10"),
+        });
         assert_eq!(storage.get_log_messages_count(), 1);
         assert_eq!(storage.get_first_log_message_time().unwrap(), 10_u64);
         assert_eq!(storage.get_last_log_message_time().unwrap(), 10_u64);
 
-        storage.store_log_message(LogMessage { timeNanos: 20, message: String::from("time 20") });
+        storage.store_log_message(LogMessage {
+            timeNanos: 20,
+            message: String::from("time 20"),
+        });
         assert_eq!(storage.get_log_messages_count(), 2);
         assert_eq!(storage.get_first_log_message_time().unwrap(), 10_u64);
         assert_eq!(storage.get_last_log_message_time().unwrap(), 20_u64);
 
-        storage.store_log_message(LogMessage { timeNanos: 30, message: String::from("time 30") });
+        storage.store_log_message(LogMessage {
+            timeNanos: 30,
+            message: String::from("time 30"),
+        });
         assert_eq!(storage.get_log_messages_count(), 2);
         assert_eq!(storage.get_first_log_message_time().unwrap(), 20_u64);
         assert_eq!(storage.get_last_log_message_time().unwrap(), 30_u64);
 
-        storage.store_log_message(LogMessage { timeNanos: 40, message: String::from("time 40") });
+        storage.store_log_message(LogMessage {
+            timeNanos: 40,
+            message: String::from("time 40"),
+        });
         assert_eq!(storage.get_log_messages_count(), 2);
         assert_eq!(storage.get_first_log_message_time().unwrap(), 30_u64);
         assert_eq!(storage.get_last_log_message_time().unwrap(), 40_u64);

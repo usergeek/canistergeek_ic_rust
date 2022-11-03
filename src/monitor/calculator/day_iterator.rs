@@ -1,5 +1,5 @@
-use chrono::Duration;
 use chrono::prelude::*;
+use chrono::Duration;
 
 /// Calendar days iterator.
 ///
@@ -19,7 +19,6 @@ pub struct DayIterator {
 }
 
 impl DayIterator {
-
     pub fn new_reverse(from_millis: i64, to_millis: i64) -> Result<DayIterator, &'static str> {
         if from_millis > to_millis {
             return Err("From date more to date");
@@ -27,7 +26,11 @@ impl DayIterator {
 
         Ok(DayIterator {
             from_day: Utc.timestamp_millis(from_millis).date(),
-            day: Utc.timestamp_millis(to_millis).date().and_hms_opt(0,0,0).unwrap(),
+            day: Utc
+                .timestamp_millis(to_millis)
+                .date()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
         })
     }
 }
@@ -36,11 +39,11 @@ impl Iterator for DayIterator {
     type Item = DateTime<Utc>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.day.date() < self.from_day  {
-            return None;
+        if self.day.date() < self.from_day {
+            None
         } else {
-            let next_day = self.day.clone();
-            self.day = self.day - Duration::days(1);
+            let next_day = self.day;
+            self.day -= Duration::days(1);
             Some(next_day)
         }
     }
@@ -48,16 +51,15 @@ impl Iterator for DayIterator {
 
 #[cfg(test)]
 mod tests {
+    use super::DayIterator;
     use chrono::prelude::*;
     use chrono::Duration;
-    use super::DayIterator;
-
 
     #[test]
     fn wrong() {
         match DayIterator::new_reverse(3_i64, 2_i64) {
             Err(_) => (),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
@@ -77,13 +79,31 @@ mod tests {
         let result = DayIterator::new_reverse(from.timestamp_millis(), to.timestamp_millis());
         let mut iter = result.unwrap();
 
-        assert_eq!(iter.next().unwrap(), to.date().and_hms(0,0,0));
-        assert_eq!(iter.next().unwrap(), to.date().and_hms(0,0,0) - Duration::days(1));
-        assert_eq!(iter.next().unwrap(), to.date().and_hms(0,0,0) - Duration::days(2));
-        assert_eq!(iter.next().unwrap(), to.date().and_hms(0,0,0) - Duration::days(3));
-        assert_eq!(iter.next().unwrap(), to.date().and_hms(0,0,0) - Duration::days(4));
-        assert_eq!(iter.next().unwrap(), to.date().and_hms(0,0,0) - Duration::days(5));
-        assert_eq!(iter.next().unwrap(), to.date().and_hms(0,0,0) - Duration::days(6));
+        assert_eq!(iter.next().unwrap(), to.date().and_hms(0, 0, 0));
+        assert_eq!(
+            iter.next().unwrap(),
+            to.date().and_hms(0, 0, 0) - Duration::days(1)
+        );
+        assert_eq!(
+            iter.next().unwrap(),
+            to.date().and_hms(0, 0, 0) - Duration::days(2)
+        );
+        assert_eq!(
+            iter.next().unwrap(),
+            to.date().and_hms(0, 0, 0) - Duration::days(3)
+        );
+        assert_eq!(
+            iter.next().unwrap(),
+            to.date().and_hms(0, 0, 0) - Duration::days(4)
+        );
+        assert_eq!(
+            iter.next().unwrap(),
+            to.date().and_hms(0, 0, 0) - Duration::days(5)
+        );
+        assert_eq!(
+            iter.next().unwrap(),
+            to.date().and_hms(0, 0, 0) - Duration::days(6)
+        );
         assert_eq!(iter.next(), None);
     }
 
@@ -94,7 +114,7 @@ mod tests {
 
         let result = DayIterator::new_reverse(from.timestamp_millis(), to.timestamp_millis());
 
-        let v : Vec<i64> = result.unwrap().take(3).map(|d| {d.timestamp()}).collect();
+        let v: Vec<i64> = result.unwrap().take(3).map(|d| d.timestamp()).collect();
         assert_eq!(1609632000_i64, v[0]);
         assert_eq!(1609545600_i64, v[1]);
         assert_eq!(1609459200_i64, v[2]);

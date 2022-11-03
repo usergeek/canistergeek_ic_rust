@@ -1,12 +1,21 @@
-use super::data_type::{LogMessagesStorage, LogMessage};
 use super::super::ic_util;
+use super::data_type::{LogMessage, LogMessagesStorage};
 
-pub fn store_log_message(storage: &mut dyn LogMessagesStorage, message: String, max_message_length: &usize) {
+pub fn store_log_message(
+    storage: &mut dyn LogMessagesStorage,
+    message: String,
+    max_message_length: &usize,
+) {
     let time_nanos = ic_util::get_ic_time_nanos();
     store_log_message_int(storage, message, max_message_length, time_nanos)
 }
 
-fn store_log_message_int(storage: &mut dyn LogMessagesStorage, message: String, max_message_length: &usize, time_nanos: u64) {
+fn store_log_message_int(
+    storage: &mut dyn LogMessagesStorage,
+    message: String,
+    max_message_length: &usize,
+    time_nanos: u64,
+) {
     let time_nanos = match storage.get_last_log_message_time() {
         None => time_nanos,
         Some(previous_time_nanos) => {
@@ -39,16 +48,24 @@ fn validate_message(message: String, max_length: &usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::super::super::logger::collector::validate_message;
-    use super::super::data_type::{LogMessagesStorage, LogMessage};
+    use super::super::data_type::{LogMessage, LogMessagesStorage};
     use crate::logger::data_type::LogMessagesInfo;
 
     #[test]
     fn test_validate_message() {
-        assert_eq!(validate_message(String::from("abcd"), &5), String::from("abcd"));
-        assert_eq!(validate_message(String::from("abcd"), &4), String::from("abcd"));
-        assert_eq!(validate_message(String::from("abcd"), &3), String::from("abc"));
+        assert_eq!(
+            validate_message(String::from("abcd"), &5),
+            String::from("abcd")
+        );
+        assert_eq!(
+            validate_message(String::from("abcd"), &4),
+            String::from("abcd")
+        );
+        assert_eq!(
+            validate_message(String::from("abcd"), &3),
+            String::from("abc")
+        );
     }
-
 
     #[test]
     fn test_shifting_message_time() {
@@ -78,11 +95,18 @@ mod tests {
             }
 
             fn get_last_log_message_time(&self) -> Option<u64> {
-                if self.messages_count == 0 { None } else { Some(self.last_time) }
+                if self.messages_count == 0 {
+                    None
+                } else {
+                    Some(self.last_time)
+                }
             }
         }
 
-        let mut storage = FakeStorage { last_time: 0, messages_count: 0 };
+        let mut storage = FakeStorage {
+            last_time: 0,
+            messages_count: 0,
+        };
 
         super::store_log_message_int(&mut storage, String::from("message1"), &20, 23);
         assert_eq!(storage.messages_count, 1);
