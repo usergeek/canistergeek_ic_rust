@@ -15,6 +15,7 @@ pub struct CanisterInfo {
 pub fn collect_canister_metrics<F>(
     storage: &mut dyn DayDataStorage,
     time_nanos: u64,
+    force_set_info: bool,
     canister_info_supplier: F,
 ) where
     F: Fn() -> CanisterInfo,
@@ -39,6 +40,15 @@ pub fn collect_canister_metrics<F>(
                 init_cell(day_data, &cell, canister_info_supplier);
             } else {
                 day_data.increment_update_calls(&cell);
+                if force_set_info {
+                    let canister_info = canister_info_supplier();
+                    day_data.set_canister_info(
+                        &cell,
+                        canister_info.heap_memory_size,
+                        canister_info.memory_size,
+                        canister_info.cycles,
+                    );
+                }
             }
         }
     }

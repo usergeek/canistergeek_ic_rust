@@ -13,14 +13,24 @@
 - `canistergeek_ic_rust::monitor` - stored data for cycles and memory consumes ~6.5Mb per year per canister (assuming data points every 5 minutes).
 - `canistergeek_ic_rust::logger` - depends on the length of messages and their number. (There is an [issue](https://github.com/dfinity/cdk-rs/issues/212) with heap memory size after upgrade).
 
+## API change in 0.3.0 version
+
+> Starting from version 0.3.0 `Monitor` has new API methods:
+> - `updateInformation` method will replace `collectMetrics` method
+> - `getInformation` method will replace `getMetrics` method
+
+New methods provide an opportunity to evolve API in the future.
+
+Legacy methods (`collectMetrics` and `getMetrics`) still available.
+
 ## Metrics
 
 ### Collecting the data
 
 Data can be collected in two ways: automatically and manually
 
-1. Manually by calling `collectCanisterMetrics` external public method
-2. Automatically by calling `canistergeek_ic_rust::monitor::collec_metrics();` in "update" methods in your canister to guarantee desired "Collect metrics" frequency. In some cases you may want to collect metrics in every "update" method to get the full picture in realtime and see how "update" methods influence canister price and capacity.
+1. Manually by calling `updateCanistergeekInformation` public method of your canister.
+2. Automatically by calling `canistergeek_ic_rust::monitor::update_information` or `canistergeek_ic_rust::monitor::collect_metrics` in "update" methods in your canister to guarantee desired "Collect metrics" frequency.<br>In some cases you may want to collect metrics in every "update" method to get the full picture in realtime and see how "update" methods influence canister price and capacity.
 
 #### Update calls
 
@@ -54,7 +64,7 @@ Default number of messages (10000) can be overridden with corresponding method i
 
 In file `Cargo.toml` your project, add dependency on crate:
 ```toml
-canistergeek_ic_rust = "0.2.2"
+canistergeek_ic_rust = "0.3.0"
 ```
 
 ## Usage
@@ -88,21 +98,22 @@ Implement public methods in the canister in order to query collected data and op
 
 // CANISTER MONITORING
 
-/// Returns collected data based on passed parameters. Called from browser.
+/// Returns canister information based on passed parameters. 
+/// Called from browser.
 /// 
-#[ic_cdk_macros::query(name = "getCanisterMetrics")]
-pub async fn get_canister_metrics(parameters: canistergeek_ic_rust::api_type::GetMetricsParameters) -> Option<canistergeek_ic_rust::api_type::CanisterMetrics<'static>> {
+#[ic_cdk_macros::query(name = "getCanistergeekInformation")]
+pub async fn get_canistergeek_information(request: canistergeek_ic_rust::api_type::GetInformationRequest) -> canistergeek_ic_rust::api_type::GetInformationResponse<'static> {
     validate_caller();
-    canistergeek_ic_rust::monitor::get_metrics(&parameters)
+    canistergeek_ic_rust::monitor::get_information(request)
 }
 
-/// Force collecting the data at current time.
+/// Updates canister information based on passed parameters at current time.
 /// Called from browser or any canister `update` method.
 ///
-#[ic_cdk_macros::update(name = "collectCanisterMetrics")]
-pub async fn collect_canister_metrics() -> () {
+#[ic_cdk_macros::update(name = "updateCanistergeekInformation")]
+pub async fn update_canistergeek_information(request: canistergeek_ic_rust::api_type::UpdateInformationRequest) -> () {
     validate_caller();
-    canistergeek_ic_rust::monitor::collect_metrics();
+    canistergeek_ic_rust::monitor::update_information(request);
 }
 
 fn validate_caller() -> () {
@@ -112,7 +123,7 @@ fn validate_caller() -> () {
 
 #### Adjust "update" methods
 
-Call `canistergeek_ic_rust::monitor::collect_metrics()` method in all "update" methods in your canister in order to automatically collect all data.
+Call `canistergeek_ic_rust::monitor::collect_metrics()` (it is a shortcut for generic method `canistergeek_ic_rust::monitor::update_information(canistergeek_ic_rust::api_type::UpdateInformationRequest {metrics=Some(canistergeek_ic_rust::api_type::CollectMetricsRequestType::normal)});`) method in all "update" methods in your canister in order to automatically collect all data.
 
 ### Add post/pre upgrade hooks
 
@@ -289,16 +300,16 @@ fn post_upgrade_function() {
     }
 }
 
-#[ic_cdk_macros::query(name = "getCanisterMetrics")]
-pub async fn get_canister_metrics(parameters: canistergeek_ic_rust::api_type::GetMetricsParameters) -> Option<canistergeek_ic_rust::api_type::CanisterMetrics<'static>> {
+#[ic_cdk_macros::query(name = "getCanistergeekInformation")]
+pub async fn get_canistergeek_information(request: canistergeek_ic_rust::api_type::GetInformationRequest) -> canistergeek_ic_rust::api_type::GetInformationResponse<'static> {
     validate_caller();
-    canistergeek_ic_rust::monitor::get_metrics(&parameters)
+    canistergeek_ic_rust::monitor::get_information(request)
 }
 
-#[ic_cdk_macros::update(name = "collectCanisterMetrics")]
-pub async fn collect_canister_metrics() -> () {
+#[ic_cdk_macros::update(name = "updateCanistergeekInformation")]
+pub async fn update_canistergeek_information(request: canistergeek_ic_rust::api_type::UpdateInformationRequest) -> () {
     validate_caller();
-    canistergeek_ic_rust::monitor::collect_metrics();
+    canistergeek_ic_rust::monitor::update_information(request);
 }
 
 #[ic_cdk_macros::query(name = "getCanisterLog")]

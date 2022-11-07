@@ -3,6 +3,64 @@ use serde::Serialize;
 
 #[allow(non_snake_case)]
 #[derive(Debug, CandidType, Deserialize)]
+pub struct GetInformationRequest {
+    pub version: bool,
+    pub status: Option<StatusRequest>,
+    pub metrics: Option<MetricsRequest>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType)]
+pub struct GetInformationResponse<'a> {
+    pub version: Option<candid::Nat>,
+    pub status: Option<StatusResponse>,
+    pub metrics: Option<MetricsResponse<'a>>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
+pub struct StatusRequest {
+    pub cycles: bool,
+    pub memory_size: bool,
+    pub heap_memory_size: bool,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType)]
+pub struct StatusResponse {
+    pub cycles: Option<u64>,
+    pub memory_size: Option<u64>,
+    pub heap_memory_size: Option<u64>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
+pub struct MetricsRequest {
+    pub parameters: GetMetricsParameters,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType)]
+pub struct MetricsResponse<'a> {
+    pub metrics: Option<CanisterMetrics<'a>>,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
+pub struct UpdateInformationRequest {
+    pub metrics: Option<CollectMetricsRequestType>,
+}
+
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
+pub enum CollectMetricsRequestType {
+    normal, //bump updateCalls and set cycles/memory once per interval
+    force,  //bump updateCalls and set cycles/memory
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, CandidType, Deserialize)]
 pub struct GetMetricsParameters {
     pub granularity: MetricsGranularity,
     pub dateFromMillis: Millis,

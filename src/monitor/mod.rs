@@ -3,15 +3,19 @@ pub mod collector;
 pub mod data_type;
 pub mod store;
 
-// use crate::api_type;
 use super::api_type::{CanisterMetrics, GetMetricsParameters};
 use super::ic_util;
+use crate::api_type::{
+    CollectMetricsRequestType, GetInformationRequest, GetInformationResponse, MetricsResponse,
+    StatusRequest, StatusResponse, UpdateInformationRequest,
+};
 use collector::CanisterInfo;
 use store::Storage;
 
 pub type PreUpgradeStableData<'a> = (&'a u8, &'a store::DayDataTable);
 pub type PostUpgradeStableData = (u8, store::DayDataTable);
 
+const API_VERSION: u8 = 1;
 const VERSION: u8 = 1;
 
 static mut STORAGE: Option<Storage> = None;
@@ -45,23 +49,86 @@ pub fn post_upgrade_stable_data((version, upgrade_data): PostUpgradeStableData) 
 }
 
 pub fn collect_metrics() {
-    collector::collect_canister_metrics(storage(), ic_util::get_ic_time_nanos(), || {
-        let heap_memory_size = ic_util::get_heap_memory_size();
-        let memory_size = ic_util::get_stable_memory_size() + heap_memory_size;
-        let cycles = ic_util::get_cycles();
-        CanisterInfo {
-            heap_memory_size,
-            memory_size,
-            cycles,
-        }
-    });
+    collect_metrics_int(false);
 }
 
+// legacy method - please use "getInformation" method
 pub fn get_metrics<'a>(parameters: &GetMetricsParameters) -> Option<CanisterMetrics<'a>> {
     match calculator::get_canister_metrics(parameters, storage()) {
         Ok(data) => Some(CanisterMetrics { data }),
         Err(_) => None,
     }
+}
+
+pub fn update_information(request: UpdateInformationRequest) {
+    if let Some(metrics_request) = request.metrics {
+        match metrics_request {
+            CollectMetricsRequestType::normal => collect_metrics_int(false),
+            CollectMetricsRequestType::force => collect_metrics_int(true),
+        };
+    }
+}
+
+pub fn get_information<'a>(request: GetInformationRequest) -> GetInformationResponse<'a> {
+    let version = obtain_value(request.version, || candid::Nat::from(API_VERSION));
+    let status = request.status.map(get_status);
+    let metrics = request.metrics.map(|request| MetricsResponse {
+        metrics: get_metrics(&request.parameters),
+    });
+
+    GetInformationResponse {
+        version,
+        status,
+        metrics,
+    }
+}
+
+fn collect_metrics_int(force_set_info: bool) {
+    collector::collect_canister_metrics(
+        storage(),
+        ic_util::get_ic_time_nanos(),
+        force_set_info,
+        || CanisterInfo {
+            heap_memory_size: get_current_heap_memory_size(),
+            memory_size: get_current_memory_size(),
+            cycles: get_current_cycles(),
+        },
+    );
+}
+
+fn get_status(request: StatusRequest) -> StatusResponse {
+    let cycles = obtain_value(request.cycles, get_current_cycles);
+    let memory_size = obtain_value(request.memory_size, get_current_memory_size);
+    let heap_memory_size = obtain_value(request.heap_memory_size, get_current_heap_memory_size);
+
+    StatusResponse {
+        cycles,
+        memory_size,
+        heap_memory_size,
+    }
+}
+
+fn obtain_value<T, F>(need: bool, supplier: F) -> Option<T>
+where
+    F: Fn() -> T,
+{
+    if need {
+        Some(supplier())
+    } else {
+        None
+    }
+}
+
+fn get_current_cycles() -> u64 {
+    ic_util::get_cycles()
+}
+
+fn get_current_memory_size() -> u64 {
+    ic_util::get_stable_memory_size() + ic_util::get_heap_memory_size()
+}
+
+fn get_current_heap_memory_size() -> u64 {
+    ic_util::get_heap_memory_size()
 }
 
 #[cfg(test)]
@@ -78,7 +145,7 @@ mod tests {
 
         let time_nanos = Utc.ymd(2022, 01, 28).and_hms(13, 0, 0).timestamp_nanos() as u64;
 
-        collector::collect_canister_metrics(&mut storage, time_nanos, || {
+        collector::collect_canister_metrics(&mut storage, time_nanos, false, || {
             let heap_memory_size = 234000;
             let memory_size = 345000;
             let cycles = 8787;
@@ -91,7 +158,7 @@ mod tests {
 
         let time_nanos = Utc.ymd(2022, 01, 28).and_hms(9, 0, 0).timestamp_nanos() as u64;
 
-        collector::collect_canister_metrics(&mut storage, time_nanos, || {
+        collector::collect_canister_metrics(&mut storage, time_nanos, false, || {
             let heap_memory_size = 1234000;
             let memory_size = 1345000;
             let cycles = 18787;

@@ -41,13 +41,28 @@ impl DayData {
         canister_cycles: u64,
     ) {
         self.update_calls_data[*cell] = update_calls;
-        self.canister_heap_memory_size_data[*cell] = canister_heap_memory_size;
-        self.canister_memory_size_data[*cell] = canister_memory_size;
-        self.canister_cycles_data[*cell] = canister_cycles;
+        self.set_canister_info(
+            cell,
+            canister_heap_memory_size,
+            canister_memory_size,
+            canister_cycles,
+        );
     }
 
     pub fn increment_update_calls(&mut self, cell: &usize) {
         self.update_calls_data[*cell] += 1;
+    }
+
+    pub fn set_canister_info(
+        &mut self,
+        cell: &usize,
+        canister_heap_memory_size: u64,
+        canister_memory_size: u64,
+        canister_cycles: u64,
+    ) {
+        self.canister_heap_memory_size_data[*cell] = canister_heap_memory_size;
+        self.canister_memory_size_data[*cell] = canister_memory_size;
+        self.canister_cycles_data[*cell] = canister_cycles;
     }
 }
 
