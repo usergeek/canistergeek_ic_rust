@@ -7,6 +7,7 @@ pub struct GetInformationRequest {
     pub version: bool,
     pub status: Option<StatusRequest>,
     pub metrics: Option<MetricsRequest>,
+    pub logs: Option<CanisterLogRequest>,
 }
 
 #[allow(non_snake_case)]
@@ -15,6 +16,7 @@ pub struct GetInformationResponse<'a> {
     pub version: Option<candid::Nat>,
     pub status: Option<StatusResponse>,
     pub metrics: Option<MetricsResponse<'a>>,
+    pub logs: Option<CanisterLogResponse<'a>>,
 }
 
 #[allow(non_snake_case)]

@@ -5,17 +5,13 @@ pub mod store;
 
 use super::api_type::{CanisterMetrics, GetMetricsParameters};
 use super::ic_util;
-use crate::api_type::{
-    CollectMetricsRequestType, GetInformationRequest, GetInformationResponse, MetricsResponse,
-    StatusRequest, StatusResponse, UpdateInformationRequest,
-};
+use crate::api_type::{StatusRequest, StatusResponse};
 use collector::CanisterInfo;
 use store::Storage;
 
 pub type PreUpgradeStableData<'a> = (&'a u8, &'a store::DayDataTable);
 pub type PostUpgradeStableData = (u8, store::DayDataTable);
 
-const API_VERSION: u8 = 1;
 const VERSION: u8 = 1;
 
 static mut STORAGE: Option<Storage> = None;
@@ -52,7 +48,6 @@ pub fn collect_metrics() {
     collect_metrics_int(false);
 }
 
-// legacy method - please use "getInformation" method
 pub fn get_metrics<'a>(parameters: &GetMetricsParameters) -> Option<CanisterMetrics<'a>> {
     match calculator::get_canister_metrics(parameters, storage()) {
         Ok(data) => Some(CanisterMetrics { data }),
@@ -60,30 +55,7 @@ pub fn get_metrics<'a>(parameters: &GetMetricsParameters) -> Option<CanisterMetr
     }
 }
 
-pub fn update_information(request: UpdateInformationRequest) {
-    if let Some(metrics_request) = request.metrics {
-        match metrics_request {
-            CollectMetricsRequestType::normal => collect_metrics_int(false),
-            CollectMetricsRequestType::force => collect_metrics_int(true),
-        };
-    }
-}
-
-pub fn get_information<'a>(request: GetInformationRequest) -> GetInformationResponse<'a> {
-    let version = obtain_value(request.version, || candid::Nat::from(API_VERSION));
-    let status = request.status.map(get_status);
-    let metrics = request.metrics.map(|request| MetricsResponse {
-        metrics: get_metrics(&request.parameters),
-    });
-
-    GetInformationResponse {
-        version,
-        status,
-        metrics,
-    }
-}
-
-fn collect_metrics_int(force_set_info: bool) {
+pub(crate) fn collect_metrics_int(force_set_info: bool) {
     collector::collect_canister_metrics(
         storage(),
         ic_util::get_ic_time_nanos(),
@@ -96,7 +68,7 @@ fn collect_metrics_int(force_set_info: bool) {
     );
 }
 
-fn get_status(request: StatusRequest) -> StatusResponse {
+pub(crate) fn get_status(request: StatusRequest) -> StatusResponse {
     let cycles = obtain_value(request.cycles, get_current_cycles);
     let memory_size = obtain_value(request.memory_size, get_current_memory_size);
     let heap_memory_size = obtain_value(request.heap_memory_size, get_current_heap_memory_size);
