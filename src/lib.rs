@@ -16,13 +16,21 @@ pub mod monitor;
 
 const API_VERSION: u8 = 1;
 
-pub fn pre_upgrade_stable_data<'a>() -> (monitor::PreUpgradeStableData<'a>, logger::PreUpgradeStableData<'a>) {
+pub fn pre_upgrade_stable_data<'a>() -> (
+    monitor::PreUpgradeStableData<'a>,
+    logger::PreUpgradeStableData<'a>,
+) {
     let monitor_stable_data = monitor::pre_upgrade_stable_data();
     let logger_stable_data = logger::pre_upgrade_stable_data();
     (monitor_stable_data, logger_stable_data)
 }
 
-pub fn post_upgrade_stable_data((monitor_stable_data, logger_stable_data): (monitor::PostUpgradeStableData, logger::PostUpgradeStableData)) {
+pub fn post_upgrade_stable_data(
+    (monitor_stable_data, logger_stable_data): (
+        monitor::PostUpgradeStableData,
+        logger::PostUpgradeStableData,
+    ),
+) {
     monitor::post_upgrade_stable_data(monitor_stable_data);
     logger::post_upgrade_stable_data(logger_stable_data);
 }
