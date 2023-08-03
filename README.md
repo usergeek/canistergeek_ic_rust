@@ -13,6 +13,10 @@
 - `canistergeek_ic_rust::monitor` - stored data for cycles and memory consumes ~6.5Mb per year per canister (assuming data points every 5 minutes).
 - `canistergeek_ic_rust::logger` - depends on the length of messages and their number. (There is an [issue](https://github.com/dfinity/cdk-rs/issues/212) with heap memory size after upgrade).
 
+## API change in 0.3.3 version
+
+> Down dependencies from candid and ic_cdk
+
 ## API change in 0.3.2 version
 
 > Up dependencies from candid and ic_cdk
