@@ -1,8 +1,7 @@
-use chrono::prelude::*;
-use std::convert::TryFrom;
-
 use super::super::api_type;
 use super::data_type;
+use chrono::prelude::*;
+use num_traits::ToPrimitive;
 
 mod day_iterator;
 
@@ -13,8 +12,8 @@ pub fn get_canister_metrics<'a>(
     parameters: &api_type::GetMetricsParameters,
     data_supplier: &'a dyn data_type::DayDataInfoSupplier,
 ) -> Result<api_type::CanisterMetricsData<'a>, &'a str> {
-    let date_from = i64::try_from(&parameters.dateFromMillis.0).unwrap();
-    let date_to = i64::try_from(&parameters.dateToMillis.0).unwrap();
+    let date_from = parameters.dateFromMillis.0.to_u64().unwrap() as i64;
+    let date_to = parameters.dateToMillis.0.to_u64().unwrap() as i64;
 
     let iterator = day_iterator::DayIterator::new_reverse(date_from, date_to)?;
 

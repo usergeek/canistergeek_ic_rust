@@ -69,7 +69,7 @@ where
 }
 
 fn get_cell(day_data: &DayData, data_time: DateTime<Utc>) -> usize {
-    let cell_count = day_data.get_update_calls_data().len() as usize;
+    let cell_count = day_data.get_update_calls_data().len();
     let seconds = (data_time.hour() * 3600 + data_time.minute() * 60 + data_time.second()) as usize;
     seconds / (DAY_SECONDS / cell_count)
 }
