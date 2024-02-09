@@ -13,6 +13,10 @@
 - `canistergeek_ic_rust::monitor` - stored data for cycles and memory consumes ~6.5Mb per year per canister (assuming data points every 5 minutes).
 - `canistergeek_ic_rust::logger` - depends on the length of messages and their number. (There is an [issue](https://github.com/dfinity/cdk-rs/issues/212) with heap memory size after upgrade).
 
+## API change in 0.4.3 version
+
+> Up dependencies from all libraries
+
 ## API change in 0.4.2 version
 
 > Up dependencies from num-bigint, num-trait
@@ -82,7 +86,7 @@ Default number of messages (10000) can be overridden with corresponding method i
 
 In file `Cargo.toml` your project, add dependency on crate:
 ```toml
-canistergeek_ic_rust = "0.4.2"
+canistergeek_ic_rust = "0.4.3"
 ```
 
 ## Usage
