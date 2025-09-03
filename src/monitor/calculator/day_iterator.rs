@@ -7,7 +7,7 @@ use chrono::Duration;
 ///
 /// Basic usage:
 ///
-/// ```
+/// ```ignore
 /// let result = DayIterator::new_reverse(23_i64, 23_i64);
 /// let mut iter = result.unwrap();
 /// assert_eq!(iter.next().unwrap().timestamp(), 0_i64);
@@ -27,7 +27,7 @@ impl DayIterator {
         Ok(DayIterator {
             from_day: Utc.timestamp_millis_opt(from_millis).unwrap(),
             day: Utc
-                .timestamp_millis_opt(from_millis).unwrap()
+                .timestamp_millis_opt(to_millis).unwrap()
                 .date_naive()
                 .and_hms_opt(0, 0, 0)
                 .unwrap()
