@@ -27,7 +27,7 @@ pub fn get_cycles() -> u64 {
 pub fn get_stable_memory_size() -> u64 {
     #[cfg(target_arch = "wasm32")]
     {
-        (ic_cdk::api::stable::stable64_size() as u64) * WASM_PAGE_SIZE
+        (ic_cdk::api::stable::stable_size() as u64) * WASM_PAGE_SIZE
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
