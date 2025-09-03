@@ -1,6 +1,6 @@
 [package]
 name = "canistergeek_ic_rust"
-version = "0.4.3"
+version = "0.4.4"
 edition = "2021"
 description = "A tool for Internet Computer to track your project canisters cycles and memory status."
 license = "MIT"
@@ -9,9 +9,9 @@ repository = "https://github.com/usergeek/canistergeek_ic_rust.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-candid = "0.10.3"
+candid = "0.10.17"
 serde = "1.0.196"
-ic-cdk = "0.12.1"
+ic-cdk = "0.18.7"
 chrono = {version = "0.4.33", default-features = false, features = ["clock", "std"]}
 num-bigint = "0.4.4"
 num-traits = "0.2.18"

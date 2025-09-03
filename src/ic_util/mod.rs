@@ -9,7 +9,7 @@ pub fn get_ic_time_nanos() -> u64 {
     #[cfg(not(target_arch = "wasm32"))]
     {
         use chrono::prelude::*;
-        Utc::now().timestamp_nanos() as u64
+        Utc::now().timestamp_nanos_opt().unwrap() as u64
     }
 }
 
