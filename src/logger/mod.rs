@@ -22,7 +22,7 @@ static mut STORAGE: Option<LogMessageStorage> = None;
 
 fn get_storage<'a>() -> &'a mut LogMessageStorage {
     unsafe {
-        if let Some(s) = &mut STORAGE {
+        if let Some(s) = &mut *std::ptr::addr_of_mut!(STORAGE) {
             s
         } else {
             STORAGE = Some(LogMessageStorage::new(DEFAULT_MAX_LOG_MESSAGES_COUNT));
@@ -43,7 +43,7 @@ pub fn post_upgrade_stable_data(data: PostUpgradeStableData) {
             STORAGE = Some(log_message_storage);
         },
         _ => {
-            ic_cdk::print(std::format!(
+            ic_cdk::api::debug_print(std::format!(
                 "Can not upgrade stable log messages data. Unsupported version {}",
                 data.0
             ));

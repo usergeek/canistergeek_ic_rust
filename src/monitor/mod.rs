@@ -13,12 +13,11 @@ pub type PreUpgradeStableData<'a> = (&'a u8, &'a store::DayDataTable);
 pub type PostUpgradeStableData = (u8, store::DayDataTable);
 
 const VERSION: u8 = 1;
-
 static mut STORAGE: Option<Storage> = None;
 
 fn storage<'a>() -> &'a mut Storage {
     unsafe {
-        if let Some(s) = &mut STORAGE {
+        if let Some(s) = &mut *std::ptr::addr_of_mut!(STORAGE) {
             s
         } else {
             STORAGE = Some(Storage::default());
@@ -33,7 +32,7 @@ pub fn pre_upgrade_stable_data<'a>() -> PreUpgradeStableData<'a> {
 
 pub fn post_upgrade_stable_data((version, upgrade_data): PostUpgradeStableData) {
     if version != VERSION {
-        ic_cdk::print(std::format!(
+        ic_cdk::api::debug_print(std::format!(
             "Can not upgrade stable data. Unsupported version {}",
             version
         ));
@@ -115,7 +114,7 @@ mod tests {
     fn test_metrics() {
         let mut storage = super::store::Storage::default();
 
-        let time_nanos = Utc.ymd(2022, 01, 28).and_hms(13, 0, 0).timestamp_nanos() as u64;
+        let time_nanos = Utc.with_ymd_and_hms(2022, 01, 28, 13, 0, 0).unwrap().timestamp_nanos_opt().unwrap() as u64;
 
         collector::collect_canister_metrics(&mut storage, time_nanos, false, || {
             let heap_memory_size = 234000;
@@ -128,7 +127,7 @@ mod tests {
             }
         });
 
-        let time_nanos = Utc.ymd(2022, 01, 28).and_hms(9, 0, 0).timestamp_nanos() as u64;
+        let time_nanos = Utc.with_ymd_and_hms(2022, 01, 28, 9, 0, 0).unwrap().timestamp_nanos_opt().unwrap() as u64;
 
         collector::collect_canister_metrics(&mut storage, time_nanos, false, || {
             let heap_memory_size = 1234000;
@@ -144,10 +143,10 @@ mod tests {
         let params = crate::api_type::GetMetricsParameters {
             granularity: crate::api_type::MetricsGranularity::hourly,
             dateFromMillis: Nat::from(
-                Utc.ymd(2022, 01, 28).and_hms(11, 11, 11).timestamp_millis() as u64
+                Utc.with_ymd_and_hms(2022, 01, 28, 11, 11, 11).unwrap().timestamp_millis() as u64
             ),
             dateToMillis: Nat::from(
-                Utc.ymd(2022, 01, 28).and_hms(11, 11, 11).timestamp_millis() as u64
+                Utc.with_ymd_and_hms(2022, 01, 28, 11, 11, 11).unwrap().timestamp_millis() as u64
             ),
         };
 
