@@ -13,6 +13,10 @@
 - `canistergeek_ic_rust::monitor` - stored data for cycles and memory consumes ~6.5Mb per year per canister (assuming data points every 5 minutes).
 - `canistergeek_ic_rust::logger` - depends on the length of messages and their number. (There is an [issue](https://github.com/dfinity/cdk-rs/issues/212) with heap memory size after upgrade).
 
+## API change in 0.4.4 version
+
+> Updated ic-cdk in order to resolve ic-cdk-executor conflicts
+
 ## API change in 0.4.3 version
 
 > Up dependencies from all libraries
@@ -86,7 +90,7 @@ Default number of messages (10000) can be overridden with corresponding method i
 
 In file `Cargo.toml` your project, add dependency on crate:
 ```toml
-canistergeek_ic_rust = "0.4.3"
+canistergeek_ic_rust = "0.4.4"
 ```
 
 ## Usage
@@ -97,9 +101,9 @@ Implement public methods in the canister in order to query collected data and op
 
 // CANISTERGEEK API
 
-/// Returns canister information based on passed parameters. 
+/// Returns canister information based on passed parameters.
 /// Called from browser.
-/// 
+///
 #[ic_cdk_macros::query(name = "getCanistergeekInformation")]
 pub async fn get_canistergeek_information(request: canistergeek_ic_rust::api_type::GetInformationRequest) -> canistergeek_ic_rust::api_type::GetInformationResponse<'static> {
     validate_caller();
@@ -158,7 +162,7 @@ In your canister did file `your_canister.did`, add next declaration:
 ...
 
 type UpdateCallsAggregatedData = vec nat64;
-type NumericEntity = 
+type NumericEntity =
  record {
    avg: nat64;
    first: nat64;
@@ -167,17 +171,17 @@ type NumericEntity =
    min: nat64;
  };
 type Nanos = nat64;
-type MetricsGranularity = 
+type MetricsGranularity =
  variant {
    daily;
    hourly;
  };
-type LogMessagesData = 
+type LogMessagesData =
  record {
    message: text;
    timeNanos: Nanos;
  };
-type HourlyMetricsData = 
+type HourlyMetricsData =
  record {
    canisterCycles: CanisterCyclesAggregatedData;
    canisterHeapMemorySize: CanisterHeapMemoryAggregatedData;
@@ -185,31 +189,31 @@ type HourlyMetricsData =
    timeMillis: int;
    updateCalls: UpdateCallsAggregatedData;
  };
-type GetMetricsParameters = 
+type GetMetricsParameters =
  record {
    dateFromMillis: nat;
    dateToMillis: nat;
    granularity: MetricsGranularity;
  };
-type GetLogMessagesParameters = 
+type GetLogMessagesParameters =
  record {
    count: nat32;
    filter: opt GetLogMessagesFilter;
    fromTimeNanos: opt Nanos;
  };
-type GetLogMessagesFilter = 
+type GetLogMessagesFilter =
  record {
    analyzeCount: nat32;
    messageContains: opt text;
    messageRegex: opt text;
  };
-type GetLatestLogMessagesParameters = 
+type GetLatestLogMessagesParameters =
  record {
    count: nat32;
    filter: opt GetLogMessagesFilter;
    upToTimeNanos: opt Nanos;
  };
-type DailyMetricsData = 
+type DailyMetricsData =
  record {
    canisterCycles: NumericEntity;
    canisterHeapMemorySize: NumericEntity;
@@ -217,32 +221,32 @@ type DailyMetricsData =
    timeMillis: int;
    updateCalls: nat64;
  };
-type CanisterMetricsData = 
+type CanisterMetricsData =
  variant {
    daily: vec DailyMetricsData;
    hourly: vec HourlyMetricsData;
  };
 type CanisterMetrics = record {data: CanisterMetricsData;};
 type CanisterMemoryAggregatedData = vec nat64;
-type CanisterLogResponse = 
+type CanisterLogResponse =
  variant {
    messages: CanisterLogMessages;
    messagesInfo: CanisterLogMessagesInfo;
  };
-type CanisterLogRequest = 
+type CanisterLogRequest =
  variant {
    getLatestMessages: GetLatestLogMessagesParameters;
    getMessages: GetLogMessagesParameters;
    getMessagesInfo;
  };
-type CanisterLogMessagesInfo = 
+type CanisterLogMessagesInfo =
  record {
    count: nat32;
    features: vec opt CanisterLogFeature;
    firstTimeNanos: opt Nanos;
    lastTimeNanos: opt Nanos;
  };
-type CanisterLogMessages = 
+type CanisterLogMessages =
  record {
    data: vec LogMessagesData;
    lastAnalyzedMessageTimeNanos: opt Nanos;
